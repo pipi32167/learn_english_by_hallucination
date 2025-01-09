@@ -57,14 +57,6 @@ async function addTextToImage(imagePath, word, outputImagePath, x, y) {
     .toFile(outputImagePath);
 }
 
-function randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function randomChoice(arr) {
-  return arr[randomInt(0, arr.length - 1)];
-}
-
 async function createVideo(word, imagePath, audioPath, outputVideoPath) {
   // Adjust audio to 1.5x speed
   const adjustedAudioPath = path.join(

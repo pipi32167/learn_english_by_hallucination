@@ -7,21 +7,46 @@ import ffmpegPath from "ffmpeg-static";
 import { createVideo } from "@/utils/video-utils";
 import multer from 'multer';
 
+// Define custom request interface to include files
+interface NextApiRequestWithFiles extends NextApiRequest {
+  files?: {
+    image?: Express.Multer.File[];
+    audio?: Express.Multer.File[];
+  };
+}
+
 if (ffmpegPath) {
   ffmpeg.setFfmpegPath(ffmpegPath);
 } else {
   throw new Error("ffmpegPath is null");
 }
 
-// Create a next-connect handler
-const router = createRouter<NextApiRequest, NextApiResponse>();
+// 创建 router 时使用扩展的接口
+const router = createRouter<NextApiRequestWithFiles, NextApiResponse>();
 
-// Configure multer to store files in memory
+// 配置 multer
 const upload = multer({
   storage: multer.memoryStorage(),
 });
 
-router.use(upload.fields([{ name: 'image', maxCount: 1 }, { name: 'audio', maxCount: 1 }]));
+// 创建上传中间件
+const uploadMiddleware = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'audio', maxCount: 1 }
+]);
+
+// 使用中间件
+router.use((req, res, next) => {
+  return new Promise<void>((resolve, reject) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    uploadMiddleware(req as any, res as any, (result: unknown) => {
+      if (result instanceof Error) {
+        return reject(result);
+      }
+      return next();
+    });
+  });
+});
 
 router.post(async (req, res) => {
   const { word } = req.body;
@@ -46,7 +71,7 @@ router.post(async (req, res) => {
 
     await createVideo(word, imagePath, audioPath, videoPath);
 
-    // read the video file
+    // 读取视频文件
     const videoBuffer = await fs.readFile(videoPath);
     const videoBase64 = videoBuffer.toString("base64");
     res.status(200).json({ video: videoBase64 });

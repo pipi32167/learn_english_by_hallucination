@@ -21,6 +21,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       duration
     });
   } catch (error) {
-    res.status(404).json({ error: 'Audio not found for the given word' });
+    res.status(404).json({ error: `Audio not found for the given word: ${error}` });
   }
 }

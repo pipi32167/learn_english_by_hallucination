@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return res.status(200).json({ imageUrl });
     } catch (error) {
-      return res.status(500).json({ error: 'Error processing image' });
+      return res.status(500).json({ error: `Error processing image: ${error}` });
     }
   } else {
     res.setHeader('Allow', ['POST']);
