@@ -21,12 +21,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     await fs.promises.writeFile(audioPath, audioBuffer);
     // await fs.access(audioPath);
-    const duration = await getAudioDurationInSeconds(audioPath);
+    // const duration = await getAudioDurationInSeconds(audioPath);
     // read audio file as base64
     const audioBase64 = audioBuffer.toString('base64');
     res.status(200).json({
       url: `data:audio/mp3;base64,${audioBase64}`,
-      duration
+      // duration
     });
   } catch (error) {
     res.status(404).json({ error: `Audio not found for the given word: ${error}` });
