@@ -25,35 +25,57 @@ async function addTextToImage(imagePath, word, outputImagePath, x, y) {
   const width = metadata.width;
   const height = metadata.height;
 
-  const fontSize = Math.floor(Math.random() * 40) + 80; // Random font size between 20 and 30
+  const fontSize = Math.floor(Math.random() * 30) + 50; // Random font size between 50 and 80
   const fontFamily = "Arial, sans-serif"; // Use a more aesthetically pleasing font family
   const fontWeight = "bold"; // Make the text bold
   const fillColor = "yellow"; // Text color
 
-  const textImage = sharp(
-    Buffer.from(
-      `<svg width="${width}" height="${height}">
-        <defs>
-          <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
-            <feOffset in="blur" dx="3" dy="3" result="offsetBlur"/>
-            <feMerge>
-              <feMergeNode in="offsetBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-        <style>
-          .text { font-family: ${fontFamily}; font-size: ${fontSize}px; font-weight: ${fontWeight}; fill: ${fillColor}; filter: url(#shadow); }
-        </style>
-        <text x="${x}" y="${y}" class="text">${word}</text>
-      </svg>`
-    ),
-    { density: 72 }
-  ).png();
+  // Create a temporary SVG to measure text dimensions
+  const tempSvg = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg">
+      <text x="0" y="0" font-family="${fontFamily}" font-size="${fontSize}px" font-weight="${fontWeight}">${word}</text>
+    </svg>`
+  );
+
+  const textImage = sharp(tempSvg, { density: 72 });
+  const textMetadata = await textImage.metadata();
+  const textWidth = textMetadata.width;
+  const textHeight = textMetadata.height;
+
+  // Adjust x and y to be the center of the text
+  let adjustedX = x - textWidth / 2;
+  let adjustedY = y + textHeight / 2 + randomInt(-20, 20);
+
+  // Ensure the text does not go out of the image boundaries
+  const padding = 10;
+  if (adjustedX < 0) adjustedX = 0 + padding;
+  if (adjustedY < textHeight) adjustedY = textHeight + padding;
+  if (adjustedX + textWidth > width) adjustedX = width - textWidth - padding;
+  if (adjustedY > height) adjustedY = height - padding;
+
+  const finalSvg = Buffer.from(
+    `<svg width="${width}" height="${height}">
+      <defs>
+        <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+          <feOffset in="blur" dx="10" dy="10" result="offsetBlur"/>
+          <feMerge>
+            <feMergeNode in="offsetBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <style>
+        .text { font-family: ${fontFamily}; font-size: ${fontSize}px; font-weight: ${fontWeight}; fill: ${fillColor}; filter: url(#shadow); }
+      </style>
+      <text x="${adjustedX}" y="${adjustedY}" class="text">${word}</text>
+    </svg>`
+  );
+
+  const finalTextImage = sharp(finalSvg, { density: 72 }).png();
 
   await image
-    .composite([{ input: await textImage.toBuffer(), top: 0, left: 0 }])
+    .composite([{ input: await finalTextImage.toBuffer(), top: 0, left: 0 }])
     .toFile(outputImagePath);
 }
 
@@ -105,13 +127,11 @@ export async function createVideo(word, imagePath, audioPath, outputVideoPath) {
     const { x: cellX, y: cellY } = allowedCells.shift();
     console.log(`Placing text at cell (${cellX}, ${cellY})`);
 
-    const x = cellX * cellWidth;
+    const x = cellX * cellWidth + Math.floor(cellWidth / 2);
     // Math.random() * Math.floor(cellWidth / 2) * randomChoice([-1, 1]) +
     // Math.floor(cellWidth / 3);
-    const y =
-      cellY * cellHeight +
-      // Math.random() * Math.floor(cellHeight / 2) * randomChoice([-1, 1]) +
-      Math.floor(cellHeight / 2);
+    const y = cellY * cellHeight + Math.floor(cellHeight / 2);
+    // Math.random() * Math.floor(cellHeight / 2) * randomChoice([-1, 1]) +
 
     const outputImagePath = path.join(outputDir, `frame_${i}.jpg`);
     await addTextToImage(imagePath, word, outputImagePath, x, y);
@@ -200,32 +220,37 @@ async function getAllowedCellsFakeRandom(imagePath) {
     [0, 2],
     [0, 3],
     [1, 4],
-    [2, 5],
+    // [2, 5],
     [3, 5],
     [4, 4],
     [5, 3],
     [5, 2],
     [4, 1],
-    [3, 0],
+    // [3, 0],
     [2, 0],
     [1, 1],
-    [1, 2],
-    [1, 3],
-    [2, 4],
-    [3, 4],
-    [4, 3],
-    [4, 2],
-    [3, 1],
-    [2, 1],
-    [2, 2],
-    [2, 3],
-    [3, 3],
-    [3, 2],
+
+    // [1, 2],
+    // [1, 3],
+    // [2, 4],
+    // [3, 4],
+    // [4, 3],
+    // [4, 2],
+    // [3, 1],
+    // [2, 1],
+    // [2, 2],
+    // [2, 3],
+    // [3, 3],
+    // [3, 2],
+    [0, 0],
+    [5, 5],
+    [0, 5],
+    [5, 0],
     // ].map(([x, y]) => ({ x: gridSize - x - 1, y: gridSize - y - 1 }));
   ].map(([x, y]) => ({ x, y: gridSize - y - 1 }));
   // .sort(() => Math.random());
 
-  // allowedCells.sort(() => Math.random() - 0.5);
+  allowedCells.sort(() => Math.random() - 0.5);
 
   return { allowedCells, cellWidth, cellHeight };
 }
