@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { promises as fs } from 'fs';
+import fs from 'fs';
 import path from 'path';
 import getAudioDurationInSeconds from 'get-audio-duration';
+import { getWordAudioFromYoudao } from '@/utils/audio-utils';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { word } = req.query;
@@ -10,14 +11,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Word is required' });
   }
 
-  const audioPath = path.join(process.cwd(), 'public', 'audios', `${word}.mp3`);
 
   try {
-    await fs.access(audioPath);
-    const duration = await getAudioDurationInSeconds(audioPath);
 
+    const audioBuffer = await getWordAudioFromYoudao(word);
+    const audioPath = path.join('/tmp', 'audios', `${word}.mp3`);
+    if (!fs.existsSync(path.dirname(audioPath))) {
+      await fs.promises.mkdir(path.dirname(audioPath), { recursive: true });
+    }
+    await fs.promises.writeFile(audioPath, audioBuffer);
+    // await fs.access(audioPath);
+    const duration = await getAudioDurationInSeconds(audioPath);
+    // read audio file as base64
+    const audioBase64 = audioBuffer.toString('base64');
     res.status(200).json({
-      url: `/audios/${word}.mp3`,
+      url: `data:audio/mp3;base64,${audioBase64}`,
       duration
     });
   } catch (error) {

@@ -40,7 +40,8 @@ const Home: React.FC = () => {
     if (word) {
       const response = await fetch(`/api/get-audio?word=${word}`);
       const data = await response.json();
-      setAudioUrl(data.url);
+      const isBase64 = data.url.startsWith('data:audio');
+      setAudioUrl(isBase64 ? data.url : `${window.location.origin}/${data.url}`);
     }
   };
 
